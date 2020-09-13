@@ -2,12 +2,18 @@ local class = require "class"
 
 local M = {}
 
+local function fileExists(n)
+  local f = io.open(n)
+  if f ~= nil then io.close(f) return true
+  else return false end
+end
+
 M.Audio = class() do
   function M.Audio:_init(...)
     self.head = {}
     self.samples = {}
     local args = {...}
-    if args[1] then
+    if args[1] and fileExists(args[1]) then
       local f = io.open(args[1], "rb")
       self.head.ChunkID = f:read(4)
       self.head.ChunkSize = string.unpack("<I",f:read(4))
@@ -37,6 +43,18 @@ M.Audio = class() do
       end
       
       f:close()
+    else
+      self.head.ChunkID = "RIFF"
+      self.head.ChunkSize = 8194
+      self.head.Format = "WAVE"
+      self.head.Subchunk1Size = 16
+      self.head.AudioFormat = 1
+      self.head.NumChannels = 1
+      self.head.SampleRate = 44100
+      self.head.ByteRate = 88200
+      self.head.BlockAlign = 2
+      self.head.BitsPerSample = 16
+      self.head.SubChunk2Size = 0
     end
   end
 
@@ -58,11 +76,7 @@ M.Audio = class() do
   end
   
   function M.Audio:reconstructSamples()
-    local samples = ""
-    for i, v in ipairs(self.samples) do
-      samples = samples .. v
-    end
-    return samples
+    return table.concat(self.samples, "")
   end
   
   function M.Audio:reconstructAudio()
